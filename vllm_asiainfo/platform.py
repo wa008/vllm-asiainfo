@@ -15,7 +15,7 @@ else:
 
 class AsiainfoPlatform(NonNvmlCudaPlatform):
     _enum = PlatformEnum.OOT
-    supported_quantization: list[str] = ["asiainfo_quant", "fp8"]
+    supported_quantization: list[str] = ["asiainfo_quant", "fp8", "compressed_tensors", "asiainfo_quant_w8a16_fp8"]
 
     @classmethod
     def pre_register_and_update(cls,
