@@ -9,7 +9,6 @@ from vllm.model_executor.layers.quantization.fp8 import (Fp8Config, Fp8LinearMet
 from vllm.model_executor.layers.quantization import register_quantization_config
 from vllm.model_executor.layers.quantization.base_config import QuantizationConfig
 from typing import Any, Callable, Dict, List, Mapping, Optional
-
 import contextlib
 import importlib
 import torch.library
@@ -17,17 +16,18 @@ from vllm.logger import init_logger
 from vllm.platforms import current_platform
 from vllm.scalar_type import ScalarType
 from vllm.model_executor.layers.quantization.compressed_tensors.schemes.compressed_tensors_w8a16_fp8 import CompressedTensorsW8A16Fp8
+from compressed_tensors.quantization import QuantizationStrategy
+from vllm.model_executor.layers.quantization.utils.w8a8_utils import (
+    convert_to_channelwise)
 import triton
 import triton.language as tl
 from triton import Config
 
 logger = init_logger(__name__)
 
-# class AsiainfoQuantConfig(Fp8Config):
-# @register_quantization_config("asiainfo_quant")
-class AsiainfoCompressedTensorsW8A16Fp8(CompressedTensorsW8A16Fp8):
+class AsiainfoQuantCompressedTensorsW8A16Fp8(CompressedTensorsW8A16Fp8):
 
-    def __init__(self, *args, **kwargsl):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     # W8A8-Fp8 kernels support only per-tensor and per-channel cases.
@@ -52,6 +52,7 @@ class AsiainfoCompressedTensorsW8A16Fp8(CompressedTensorsW8A16Fp8):
             # required by torch.compile to be torch.nn.Parameter
             layer.input_scale = torch.nn.Parameter(layer.input_scale.data,
                                                    requires_grad=False)
+        logger.debug(f"process_weights_after_loading")
         # prepare_fp8_layer_for_marlin(layer, strategy="channel"
 
     def apply_weights(self,
@@ -60,14 +61,16 @@ class AsiainfoCompressedTensorsW8A16Fp8(CompressedTensorsW8A16Fp8):
                       bias: Optional[torch.Tensor] = None) -> torch.Tensor:
 
         reshaped_x = x.reshape(-1, x.shape[-1])
-        out_shape = x.shape[:-1] + (size_n, )
-        output = fp8_float16_gemm_hzp_tag(reshaped_x, layer.weight)
+        out_shape = x.shape[:-1] + (layer.output_size_per_partition, )
+        logger.debug(f"asiainfo_apply_weigth")
+        output = asiainfo_fp8_float16_gemm(reshaped_x, layer.weight)
         if bias is not None:
             output.add_(bias)  # In-place add
         return output.reshape(out_shape)
 
 
-def fp8_float16_gemm_hzp_tag(a: torch.Tensor, b: torch.Tensor):
+# chitu: https://github.com/thu-pacman/chitu/blob/74398035e99ca1b3fb80402f32cd54886def0def/chitu/ops.py#L460
+def asiainfo_fp8_float16_gemm(a: torch.Tensor, b: torch.Tensor):
     """
     Perform a matrix multiplication with FP8 dynamically casted to BF16.
     Args:
@@ -203,6 +206,4 @@ def fp8_float16_gemm_hzp_tag_kernel(
     c_ptrs = C + N * offs_cm[:, None] + offs_cn[None, :]
     c_mask = (offs_cm[:, None] < M) & (offs_cn[None, :] < N)
     tl.store(c_ptrs, c, mask=c_mask)
-
-
 

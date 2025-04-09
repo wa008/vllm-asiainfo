@@ -4,10 +4,10 @@ from contextlib import suppress
 from typing import Any, Dict, List, Literal, Optional, Tuple, cast
 
 import torch
-from vllm.model_executor.layers.quantization.compressed_tensors.config import (CompressionFormat,
+from compressed_tensors.config import (CompressionFormat,
                                        SparsityCompressionConfig,
                                        SparsityStructure)
-from vllm.model_executor.layers.quantization.compressed_tensors.quantization import (QuantizationArgs,
+from compressed_tensors.quantization import (QuantizationArgs,
                                              QuantizationStrategy,
                                              QuantizationType)
 from pydantic import BaseModel
@@ -30,20 +30,24 @@ from vllm.model_executor.layers.quantization.compressed_tensors.utils import (
     should_ignore_layer)
 from vllm.model_executor.layers.quantization.kv_cache import BaseKVCacheMethod
 from vllm.platforms import current_platform
-from vllm.model_executor.layers.quantization.compressed_tensors import CompressedTensorsConfig
-from .quant_w8a16_schema import AsiainfoCompressedTensorsW8A16Fp8
+from vllm.model_executor.layers.quantization.compressed_tensors.compressed_tensors import CompressedTensorsConfig
+from vllm.model_executor.layers.quantization import register_quantization_config
+from .quant_compressed_tensors_schema import AsiainfoQuantCompressedTensorsW8A16Fp8
 
 logger = init_logger(__name__)
 
-@register_quantization_config("asiainfo_quant_w8a16_fp8")
-class AsiainfoCompressedTensorsConfig(CompressedTensorsConfig):
+# rewrite exist config
+@register_quantization_config("compressed-tensors")
+class AsiainfoQuantCompressedTensorsConfig(CompressedTensorsConfig):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        logger.debug(f"AsiainfoQuantCompressedTensorsConfig init function call")
 
     def _get_scheme_from_parts(
                     self, weight_quant: BaseModel,
                     input_quant: BaseModel) -> "CompressedTensorsScheme":
-        return AsiainfoCompressedTensorsW8A16Fp8(
+        logger.debug(f"AsiainfoQuantCompressedTensorsConfig _get_scheme_from_parts function call")
+        return AsiainfoQuantCompressedTensorsW8A16Fp8(
             strategy=weight_quant.strategy,
             is_static_input_scheme=not input_quant.dynamic
         )

@@ -13,13 +13,15 @@ else:
     VllmConfig = None
     FlexibleArgumentParser = None
 
+
 class AsiainfoPlatform(NonNvmlCudaPlatform):
-    _enum = PlatformEnum.OOT
-    supported_quantization: list[str] = ["asiainfo_quant", "fp8", "compressed_tensors", "asiainfo_quant_w8a16_fp8"]
+    # _enum = PlatformEnum.OOT
+    supported_quantization: list[str] = ["asiainfo_quant", "fp8", "compressed-tensors"]
 
     @classmethod
     def pre_register_and_update(cls,
                                 parser: Optional[FlexibleArgumentParser] = None
                                 ) -> None:
-        from vllm_asiainfo.quantization.quant_w8a16 import AsiainfoQuantConfig
+        from vllm_asiainfo.quantization.quant_w8a16_config import AsiainfoQuantConfig # add new quant config
+        from vllm_asiainfo.quantization.quant_compressed_tensors_config import AsiainfoQuantCompressedTensorsConfig # rewrite exist quant config
 
