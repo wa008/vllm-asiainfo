@@ -90,14 +90,14 @@ def asiainfo_fp8_float16_gemm(a: torch.Tensor, b: torch.Tensor):
     grid = lambda META: (
         triton.cdiv(M, META["BLOCK_SIZE_M"]) * triton.cdiv(N, META["BLOCK_SIZE_N"]),
     )
-    fp8_float16_gemm_hzp_tag_kernel[grid](
+    asiainfo_fp8_float16_gemm_kernel[grid](
         # a, b.view(dtype=torch.uint8).T.contiguous(), c, M, N, K, group_n=128, group_k=128
         a, b.view(dtype=torch.uint8), c, M, N, K, group_n=128, group_k=128
     )
     return c
 
 
-fp8_float16_gemm_hzp_tag_configs = [
+asiainfo_fp8_float16_gemm_configs = [
     Config(
         {
             "BLOCK_SIZE_M": block_m,
@@ -116,9 +116,9 @@ fp8_float16_gemm_hzp_tag_configs = [
     for num_warps in [4, 8]
 ]
 
-@triton.autotune(configs=fp8_float16_gemm_hzp_tag_configs, key=["N", "K"])
+@triton.autotune(configs=asiainfo_fp8_float16_gemm_configs, key=["N", "K"])
 @triton.jit
-def fp8_float16_gemm_hzp_tag_kernel(
+def asiainfo_fp8_float16_gemm_kernel(
     A,
     B,
     C,

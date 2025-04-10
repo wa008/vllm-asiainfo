@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(name='vllm_asiainfo',
       version='0.1',
-      packages=['vllm_asiainfo'],
+      packages=['vllm_asiainfo', 'vllm_asiainfo.quantization'],
       entry_points={
           "vllm.platform_plugins": ["register_asiainfo = vllm_asiainfo:register"],
       })
